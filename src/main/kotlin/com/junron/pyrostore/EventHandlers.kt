@@ -6,7 +6,7 @@ fun PyroStore.onConnect(callback: () -> Unit) {
     onConnectCallbacks += callback
 }
 
-fun onConnect() {
+internal fun onConnect() {
     onConnectCallbacks.forEach { it() }
 }
 
@@ -15,7 +15,7 @@ fun PyroStore.onProjectConnect(callback: () -> Unit) {
     onProjectConnectCallbacks += callback
 }
 
-fun onProjectConnect() {
+internal fun onProjectConnect() {
     onProjectConnectCallbacks.forEach { it() }
 }
 
@@ -25,7 +25,7 @@ fun PyroStore.onDisconnect(callback: () -> Unit) {
 }
 
 
-fun onDisconnect() {
+internal fun onDisconnect() {
     onDisconnectCallbacks.forEach { it() }
 }
 

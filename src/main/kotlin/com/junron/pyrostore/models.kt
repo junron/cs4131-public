@@ -3,7 +3,7 @@ package com.junron.pyrostore
 import kotlinx.serialization.Serializable
 
 @Serializable
-sealed class WebsocketMessage {
+internal sealed class WebsocketMessage {
     @Serializable
     data class Error(val message: String) : WebsocketMessage()
 
@@ -56,7 +56,7 @@ sealed class WebsocketMessage {
 }
 
 @Serializable
-data class User(
+internal data class User(
     val `authed?`: Boolean,
     val name: String,
     val id: String? = null,
@@ -64,20 +64,17 @@ data class User(
 )
 
 @Serializable
-data class Project(
+internal data class Project(
     val name: String,
     val auth: Boolean,
     val collections: List<CollectionConfig>
 )
 
 @Serializable
-data class CollectionConfig(val name: String)
+internal data class CollectionConfig(val name: String)
 
 @Serializable
-data class Collection(val name: String, val values: List<CollectionItem>)
-
-@Serializable
-data class CollectionItem(val id: String, val data: String)
+internal data class CollectionItem(val id: String, val data: String)
 
 enum class ChangeType {
     CREATED, UPDATED, DELETED, REFRESHED

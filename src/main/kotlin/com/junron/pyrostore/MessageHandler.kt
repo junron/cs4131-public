@@ -3,7 +3,7 @@ package com.junron.pyrostore
 import com.junron.pyrostore.WebsocketMessage.*
 import kotlinx.serialization.UnstableDefault
 
-object MessageHandler {
+internal object MessageHandler {
     @UnstableDefault
     fun onMessage(message: WebsocketMessage, pyroStore: PyroStore){
         when(message){

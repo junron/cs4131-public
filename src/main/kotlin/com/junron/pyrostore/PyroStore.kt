@@ -5,6 +5,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.features.websocket.ClientWebSocketSession
 import io.ktor.client.features.websocket.WebSockets
 import io.ktor.client.features.websocket.ws
+import io.ktor.client.features.websocket.wss
 import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.header
 import io.ktor.http.cio.websocket.Frame
@@ -20,10 +21,10 @@ class PyroStore {
     private var projectName = ""
     private var auth = ""
     private var local = false
+    private var url = ""
     private lateinit var connection: ClientWebSocketSession
     internal val collections = mutableListOf<PyrostoreCollection<*>>()
-    lateinit var project: Project
-        internal set
+    internal lateinit var project: Project
 
     fun project(name: String): PyroStore {
         projectName = name
@@ -32,6 +33,11 @@ class PyroStore {
 
     fun auth(token: String): PyroStore {
         auth = token
+        return this
+    }
+
+    fun remote(url: String): PyroStore {
+        this.url = url
         return this
     }
 
@@ -54,6 +60,19 @@ class PyroStore {
                     }
                 },
                 port = 8080,
+                path = "/websockets",
+                block = ::connectionHandler
+            )
+        }else{
+            client.wss(
+                request = {
+                    with(HttpRequestBuilder()) {
+                        header("cookie", "user_sess=$auth")
+                        this
+                    }
+                },
+                host = url,
+                port = 443,
                 path = "/websockets",
                 block = ::connectionHandler
             )
@@ -82,7 +101,7 @@ class PyroStore {
     }
 
     fun <T> collection(name: String, serializer: DeserializationStrategy<T>): PyrostoreCollection<T> {
-        val collection = PyrostoreCollection<T>(name, project, connection, serializer)
+        val collection = PyrostoreCollection<T>(name, connection, serializer)
         collections.add(collection)
         return collection
     }

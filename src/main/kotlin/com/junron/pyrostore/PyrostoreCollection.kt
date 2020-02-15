@@ -13,7 +13,6 @@ import java.util.*
 @UnstableDefault
 class PyrostoreCollection<T>(
     val name: String,
-    val project: Project,
     private val connection: WebSocketSession,
     private val serializer: DeserializationStrategy<T>,
     private val items: MutableList<ItemWrapper<T>> = mutableListOf()
