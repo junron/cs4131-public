@@ -3,7 +3,7 @@ plugins {
     id 'org.jetbrains.kotlin.plugin.serialization' version '1.3.61'
 }
 
-group 'org.example'
+group 'com.junron'
 version '1.0-SNAPSHOT'
 
 repositories {
@@ -33,21 +33,22 @@ apply plugin: "maven-publish"
 publishing {
     repositories {
         maven {
-            name = "pyrostore"
+            name = "Github"
             url = uri("https://maven.pkg.github.com/junron/cs4131-public")
             credentials {
-                //findProperty will allow these properties to be absent and still run the build, just won't publish
-                username = findProperty("GITHUB_USERNAME")
-                password = findProperty("GITHUB_API_TOKEN")
+                username = "junron"
+                password = System.getenv("GITHUB_TOKEN")
             }
         }
     }
     publications {
         register("jar", MavenPublication) {
-            from(components["kotlin"])
-            pom {
-                url.set("https://github.com/junron/cs4131-public.git") //TODO update owner/repo
-            }
+            from(components["java"])
         }
     }
+//    repositories {
+//        maven {
+//            url = uri("$buildDir/repository")
+//        }
+//    }
 }

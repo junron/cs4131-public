@@ -19,6 +19,8 @@ jobs:
           ./gradlew clean
           ./gradlew build
       - name: Publish
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           chmod +x ./gradlew
           ./gradlew publish
