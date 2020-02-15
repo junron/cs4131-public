@@ -27,3 +27,27 @@ compileKotlin {
 compileTestKotlin {
     kotlinOptions.jvmTarget = "1.8"
 }
+
+apply plugin: "maven-publish"
+
+publishing {
+    repositories {
+        maven {
+            name = "pyrostore"
+            url = uri("https://maven.pkg.github.com/junron/cs4131-public")
+            credentials {
+                //findProperty will allow these properties to be absent and still run the build, just won't publish
+                username = findProperty("GITHUB_USERNAME")
+                password = findProperty("GITHUB_API_TOKEN")
+            }
+        }
+    }
+    publications {
+        register("jar", MavenPublication) {
+            from(components["kotlin"])
+            pom {
+                url.set("https://github.com/junron/cs4131-public.git") //TODO update owner/repo
+            }
+        }
+    }
+}
