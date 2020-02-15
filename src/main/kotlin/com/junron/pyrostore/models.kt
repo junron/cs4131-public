@@ -57,7 +57,7 @@ internal sealed class WebsocketMessage {
 
 @Serializable
 internal data class User(
-    val `authed?`: Boolean,
+    val authed: Boolean,
     val name: String,
     val id: String? = null,
     val project: Project? = null
