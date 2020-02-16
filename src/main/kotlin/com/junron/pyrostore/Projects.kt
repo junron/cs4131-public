@@ -30,7 +30,7 @@ val Project.dataDir: File?
     get() = Projects.projectDirs[this]
 
 @Serializable
-data class CollectionConfig(val name: String)
+data class CollectionConfig(val name: String, val prefix: Boolean?)
 
 @Serializable
 data class Collection(val name: String, val values: List<CollectionItem>)

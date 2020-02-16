@@ -16,17 +16,17 @@ object WebsocketHandler {
     private val connections = mutableMapOf<WebSocketSession, User>()
 
     suspend fun handleConnect(call: ApplicationCall, context: WebSocketSession) {
-        val token = call.request.cookies["user_sess"] ?: return run {
+        val token = call.request.cookies["user_sess"].makeNullIfEmpty() ?: return run {
             val user = User(false, "Anonymous")
             connections[context] = user
             context.sendMessage(Auth(user))
         }
-        when(val result = auth(token)){
+        when (val result = auth(token)) {
             is Either.Left -> {
                 connections[context] = result.value
                 context.sendMessage(Auth(result.value))
             }
-            is Either.Right ->{
+            is Either.Right -> {
                 context.sendMessage(AuthError(result.value))
                 context.close(CloseReason(401, "Unauthenticated"))
             }
@@ -36,9 +36,9 @@ object WebsocketHandler {
     suspend fun broadcast(message: WebsocketMessage, project: Project) {
         for (webSocketSession in connections.keys) {
             val user = connections[webSocketSession] ?: continue
-            try{
+            try {
                 if (user.project == project) webSocketSession.sendMessage(message)
-            }catch (e: ClosedChannelException){
+            } catch (e: ClosedChannelException) {
                 connections.remove(webSocketSession)
             }
         }
@@ -99,6 +99,10 @@ object WebsocketHandler {
         sendMessage(WebsocketMessage.Error(message))
     }
 }
+
+private fun String?.makeNullIfEmpty() =
+    if (this?.isEmpty() == true) null else this
+
 
 @Serializable
 data class User(

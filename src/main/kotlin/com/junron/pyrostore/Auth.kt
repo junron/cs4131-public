@@ -14,7 +14,7 @@ private val jwks = JwkProviderBuilder(URL("https://login.microsoftonline.com/com
 fun auth(token: String): Either<User, String> {
     val decoded = JWT.decode(token)
     val kid = decoded.getHeaderClaim("kid")?.asString() ?: return Either.Right("Key id not found")
-    val alg = Algorithm.RSA256(jwks.get(kid) as RSAPublicKey, null)
+    val alg = Algorithm.RSA256(jwks.get(kid).publicKey as RSAPublicKey, null)
     try {
         alg.verify(decoded)
     } catch (exception: JWTVerificationException) {

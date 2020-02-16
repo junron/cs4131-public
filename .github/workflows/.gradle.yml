@@ -28,6 +28,6 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: 'ap-southeast-1'
           SOURCE_DIR: 'build/libs'
-#      - name: Redeploy
-#        run: |
-#          curl https://webhooks.chatbox2.ml/hooks/404bot
+      - name: Redeploy
+        run: |
+          curl https://webhooks.chatbox2.ml/hooks/pyrostore
