@@ -2,12 +2,16 @@ package com.junron.pyrostore
 
 import com.junron.pyrostore.WebsocketMessage.ProjectConnect
 import io.ktor.client.HttpClient
+import io.ktor.client.features.cookies.AcceptAllCookiesStorage
+import io.ktor.client.features.cookies.ConstantCookiesStorage
+import io.ktor.client.features.cookies.HttpCookies
 import io.ktor.client.features.websocket.ClientWebSocketSession
 import io.ktor.client.features.websocket.WebSockets
 import io.ktor.client.features.websocket.ws
 import io.ktor.client.features.websocket.wss
 import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.header
+import io.ktor.http.Cookie
 import io.ktor.http.cio.websocket.Frame
 import io.ktor.http.cio.websocket.WebSocketSession
 import io.ktor.http.cio.websocket.readText
@@ -50,27 +54,18 @@ class PyroStore {
     suspend fun connect(): PyroStore {
         val client = HttpClient {
             install(WebSockets)
+            install(HttpCookies) {
+                storage = ConstantCookiesStorage(Cookie("user_sess", auth))
+            }
         }
         if (local) {
             client.ws(
-                request = {
-                    with(HttpRequestBuilder()) {
-                        header("cookie", "user_sess=$auth")
-                        this
-                    }
-                },
                 port = 8080,
                 path = "/websockets",
                 block = ::connectionHandler
             )
-        }else{
+        } else {
             client.wss(
-                request = {
-                    with(HttpRequestBuilder()) {
-                        header("cookie", "user_sess=$auth")
-                        this
-                    }
-                },
                 host = url,
                 port = 443,
                 path = "/websockets",

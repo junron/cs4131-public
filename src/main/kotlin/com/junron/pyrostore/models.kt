@@ -71,7 +71,7 @@ internal data class Project(
 )
 
 @Serializable
-internal data class CollectionConfig(val name: String)
+data class CollectionConfig(val name: String, val prefix: Boolean?)
 
 @Serializable
 internal data class CollectionItem(val id: String, val data: String)
