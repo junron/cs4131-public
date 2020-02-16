@@ -9,6 +9,13 @@ group 'org.example'
 version '1.0-SNAPSHOT'
 
 repositories {
+    maven {
+        url = "https://maven.pkg.github.com/junron/cs4131-public"
+        credentials {
+            username = "junron"
+            password = "5cc0a532b69134bd4fecba125c2451cc8f966be0"
+        }
+    }
     jcenter()
     mavenCentral()
 }
@@ -22,8 +29,9 @@ dependencies {
     implementation "ch.qos.logback:logback-classic:1.2.3"
     implementation "io.ktor:ktor-client-core:$ktorVersion"
     implementation "io.ktor:ktor-client-cio:$ktorVersion"
-    implementation "io.ktor:ktor-client-websockets:$ktorVersion"
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime:0.14.0")
+    implementation 'com.auth0:java-jwt:3.9.0'
+    implementation 'com.auth0:jwks-rsa:0.10.0'
 }
 
 compileKotlin {

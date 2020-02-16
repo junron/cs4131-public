@@ -2,9 +2,10 @@ package com.junron.pyrostore
 
 import com.junron.pyrostore.WebsocketMessage.*
 import io.ktor.application.ApplicationCall
+import io.ktor.http.cio.websocket.CloseReason
 import io.ktor.http.cio.websocket.Frame
 import io.ktor.http.cio.websocket.WebSocketSession
-import io.ktor.http.websocket.websocketServerAccept
+import io.ktor.http.cio.websocket.close
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UnstableDefault
 import kotlinx.serialization.json.Json
@@ -19,6 +20,16 @@ object WebsocketHandler {
             val user = User(false, "Anonymous")
             connections[context] = user
             context.sendMessage(Auth(user))
+        }
+        when(val result = auth(token)){
+            is Either.Left -> {
+                connections[context] = result.value
+                context.sendMessage(Auth(result.value))
+            }
+            is Either.Right ->{
+                context.sendMessage(AuthError(result.value))
+                context.close(CloseReason(401, "Unauthenticated"))
+            }
         }
     }
 
@@ -42,16 +53,13 @@ object WebsocketHandler {
         connections.remove(context)
     }
 
-    private fun auth(context: WebSocketSession) =
-        connections.filterKeys { session -> context == session }.values.firstOrNull()
-
     suspend fun handleMessage(session: WebSocketSession, message: WebsocketMessage) {
         with(session) {
             val user = connections[session] ?: return reject("User does not exist")
             when (message) {
                 is ProjectConnect -> {
                     val project = Projects[message.projectName] ?: return reject("Project does not exist")
-                    if (project.auth && !user.`authed?`) return reject("Authentication required for project")
+                    if (project.auth && !user.authed) return reject("Authentication required for project")
                     connections[session] = user.copy(project = project)
                     sendMessage(ProjectConnected(project))
                 }
@@ -88,13 +96,13 @@ object WebsocketHandler {
     }
 
     private suspend fun WebSocketSession.reject(message: String) {
-        sendMessage(Error(message))
+        sendMessage(WebsocketMessage.Error(message))
     }
 }
 
 @Serializable
 data class User(
-    val `authed?`: Boolean,
+    val authed: Boolean,
     val name: String,
     val id: String? = null,
     val project: Project? = null
