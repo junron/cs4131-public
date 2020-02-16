@@ -16,6 +16,7 @@ object WebsocketHandler {
     private val connections = mutableMapOf<WebSocketSession, User>()
 
     suspend fun handleConnect(call: ApplicationCall, context: WebSocketSession) {
+        println(call.request.cookies.rawCookies)
         val token = call.request.cookies["user_sess"].makeNullIfEmpty() ?: return run {
             val user = User(false, "Anonymous")
             connections[context] = user
