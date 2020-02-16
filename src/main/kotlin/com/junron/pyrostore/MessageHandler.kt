@@ -14,7 +14,10 @@ internal object MessageHandler {
                 pyroStore.project = message.project
                 onProjectConnect()
             }
-            is Auth -> println("Authenticated as user ${message.user.name}")
+            is Auth -> {
+                println("Authenticated as user ${message.user.name}")
+                pyroStore.user = message.user
+            }
             is ItemAdded -> {
                 println("Item added: ${message.item}")
                 val collection = pyroStore.collections.firstOrNull {

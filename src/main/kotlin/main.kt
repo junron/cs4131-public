@@ -16,16 +16,17 @@ fun main() {
 
         pyrostore.onProjectConnect {
             GlobalScope.launch {
-                val collection = pyrostore.collection("strings", String.serializer())
+                val collection = pyrostore.collection("hello", String.serializer())
                 collection.watch { type, id, item ->
                     if(type == ChangeType.REFRESHED){
                         println(collection)
+                        return@watch
                     }
                     println(type)
                     println(id)
                     println(item)
                 }
-//                collection += "Hello, world"
+                collection += "Hello, world"
             }
         }
 

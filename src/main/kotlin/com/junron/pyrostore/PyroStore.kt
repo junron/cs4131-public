@@ -2,15 +2,12 @@ package com.junron.pyrostore
 
 import com.junron.pyrostore.WebsocketMessage.ProjectConnect
 import io.ktor.client.HttpClient
-import io.ktor.client.features.cookies.AcceptAllCookiesStorage
 import io.ktor.client.features.cookies.ConstantCookiesStorage
 import io.ktor.client.features.cookies.HttpCookies
 import io.ktor.client.features.websocket.ClientWebSocketSession
 import io.ktor.client.features.websocket.WebSockets
 import io.ktor.client.features.websocket.ws
 import io.ktor.client.features.websocket.wss
-import io.ktor.client.request.HttpRequestBuilder
-import io.ktor.client.request.header
 import io.ktor.http.Cookie
 import io.ktor.http.cio.websocket.Frame
 import io.ktor.http.cio.websocket.WebSocketSession
@@ -25,10 +22,13 @@ class PyroStore {
     private var projectName = ""
     private var auth = ""
     private var local = false
-    private var url = ""
+    private var url = "localhost"
     private lateinit var connection: ClientWebSocketSession
     internal val collections = mutableListOf<PyrostoreCollection<*>>()
-    internal lateinit var project: Project
+    lateinit var project: Project
+        internal set
+    lateinit var user: User
+        internal set
 
     fun project(name: String): PyroStore {
         projectName = name
@@ -55,7 +55,7 @@ class PyroStore {
         val client = HttpClient {
             install(WebSockets)
             install(HttpCookies) {
-                storage = ConstantCookiesStorage(Cookie("user_sess", auth))
+                storage = ConstantCookiesStorage(Cookie("user_sess", auth, domain = url))
             }
         }
         if (local) {

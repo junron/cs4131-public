@@ -4,7 +4,7 @@ plugins {
 }
 
 group 'com.junron'
-version '1.0.2'
+version '1.0.2.1'
 
 repositories {
     mavenCentral()
@@ -26,29 +26,4 @@ compileKotlin {
 }
 compileTestKotlin {
     kotlinOptions.jvmTarget = "1.8"
-}
-
-apply plugin: "maven-publish"
-
-publishing {
-    repositories {
-        maven {
-            name = "Github"
-            url = uri("https://maven.pkg.github.com/junron/cs4131-public")
-            credentials {
-                username = "junron"
-                password = System.getenv("GITHUB_TOKEN")
-            }
-        }
-    }
-    publications {
-        register("jar", MavenPublication) {
-            from(components["java"])
-        }
-    }
-//    repositories {
-//        maven {
-//            url = uri("$buildDir/repository")
-//        }
-//    }
 }
