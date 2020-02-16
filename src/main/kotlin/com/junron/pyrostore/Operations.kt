@@ -10,53 +10,55 @@ import java.io.File
 
 @UnstableDefault
 object Operations {
-    suspend fun addItem(name: String, item: CollectionItem, project: Project): Result {
-        val collection = project.getCollection(name) ?: return Result(true, "Collection does not exist")
+    suspend fun addItem(collection: CollectionFile, item: CollectionItem, project: Project): Result {
         collection.writeData(collection.data + item)
-        WebsocketHandler.broadcast(ItemAdded(name, item), project)
+        WebsocketHandler.broadcast(ItemAdded(collection.name, item), project)
         return Result(false, "Success")
     }
 
-    suspend fun setItem(name: String, item: CollectionItem, project: Project): Result {
-        val collection = project.getCollection(name) ?: return Result(true, "Collection does not exist")
+    suspend fun setItem(collection: CollectionFile, item: CollectionItem, project: Project): Result {
         val data = collection.data as MutableList
         data.replaceAll { if (it.id == item.id) item else it }
         collection.writeData(data)
-        WebsocketHandler.broadcast(ItemEdited(name, item), project)
-        return Result(false, "Success")
-    }
-    suspend fun deleteItem(name: String, id: String, project: Project): Result {
-        val collection = project.getCollection(name) ?: return Result(true, "Collection does not exist")
-        val data = collection.data as MutableList
-        data.removeIf { it.id == id }
-        collection.writeData(data)
-        WebsocketHandler.broadcast(ItemDeleted(name, id), project)
+        WebsocketHandler.broadcast(ItemEdited(collection.name, item), project)
         return Result(false, "Success")
     }
 
-    suspend fun loadCollection(name: String, project: Project, connection: WebSocketSession): Result {
-        val collection = project.getCollection(name) ?: return Result(true, "Collection does not exist")
-        connection.sendMessage(CollectionLoaded(name, collection.data))
+    suspend fun deleteItem(collection: CollectionFile, id: String, project: Project): Result {
+        val data = collection.data as MutableList
+        data.removeIf { it.id == id }
+        collection.writeData(data)
+        WebsocketHandler.broadcast(ItemDeleted(collection.name, id), project)
+        return Result(false, "Success")
+    }
+
+    suspend fun loadCollection(collection: CollectionFile, connection: WebSocketSession): Result {
+        connection.sendMessage(CollectionLoaded(collection.name, collection.data))
         return Result(false, "Success")
     }
 }
 
 @UnstableDefault
-fun Project.getCollection(name: String) =
-    this.dataDir?.getCollectionFile(name)?.let { CollectionFile(it, name) }
+fun Project.getCollection(name: String, user: User) =
+    this.dataDir
+        ?.namespaced(this.collections.firstOrNull { it.name == name }, user)
+        ?.getCollectionFile(name)?.let {
+            CollectionFile(it, name)
+        }
 
 @UnstableDefault
 class CollectionFile(private val file: File, val name: String) {
     init {
-        if(!file.exists()){
+        if (!file.exists()) {
             file.createNewFile()
             file.writeText("[]")
         }
     }
+
     val data: List<CollectionItem>
         get() = Json.parse(CollectionItem.serializer().list, file.readText())
 
-    fun writeData(items: List<CollectionItem>){
+    fun writeData(items: List<CollectionItem>) {
         file.writeText(
             Json.stringify(CollectionItem.serializer().list, items)
         )
@@ -66,3 +68,12 @@ class CollectionFile(private val file: File, val name: String) {
 data class Result(val error: Boolean, val message: String)
 
 fun File.getCollectionFile(name: String) = this.resolve("$name.json")
+
+fun File.namespaced(collectionConfig: CollectionConfig?, user: User) =
+    if (collectionConfig?.prefix == true) {
+        with(user.id?.let { this.resolve(it) }) {
+            if (this?.exists() == false) this.mkdirs()
+            this
+        }
+    } else this
+

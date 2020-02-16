@@ -6,6 +6,7 @@ import io.ktor.http.cio.websocket.CloseReason
 import io.ktor.http.cio.websocket.Frame
 import io.ktor.http.cio.websocket.WebSocketSession
 import io.ktor.http.cio.websocket.close
+import kotlinx.coroutines.channels.ClosedSendChannelException
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UnstableDefault
 import kotlinx.serialization.json.Json
@@ -35,14 +36,18 @@ object WebsocketHandler {
     }
 
     suspend fun broadcast(message: WebsocketMessage, project: Project) {
+        val disconnectedSockets = mutableListOf<WebSocketSession>()
         for (webSocketSession in connections.keys) {
             val user = connections[webSocketSession] ?: continue
             try {
                 if (user.project == project) webSocketSession.sendMessage(message)
             } catch (e: ClosedChannelException) {
-                connections.remove(webSocketSession)
+                disconnectedSockets += webSocketSession
+            } catch (e: ClosedSendChannelException) {
+                disconnectedSockets += webSocketSession
             }
         }
+        disconnectedSockets.forEach { connections.remove(it) }
     }
 
     suspend fun WebSocketSession.sendMessage(message: WebsocketMessage) {
@@ -57,37 +62,39 @@ object WebsocketHandler {
     suspend fun handleMessage(session: WebSocketSession, message: WebsocketMessage) {
         with(session) {
             val user = connections[session] ?: return reject("User does not exist")
+            if (message is ProjectConnect) {
+                val project = Projects[message.projectName] ?: return reject("Project does not exist")
+                if (project.auth && !user.authed) return reject("Authentication required for project")
+                connections[session] = user.copy(project = project)
+                sendMessage(ProjectConnected(project))
+                return
+            }
+            val project = user.project ?: return reject("Project does not exist")
+            val collection = message.collectionName?.let {
+                project.getCollection(it, user)
+            } ?: return reject("Collection does not exist")
+
             when (message) {
-                is ProjectConnect -> {
-                    val project = Projects[message.projectName] ?: return reject("Project does not exist")
-                    if (project.auth && !user.authed) return reject("Authentication required for project")
-                    connections[session] = user.copy(project = project)
-                    sendMessage(ProjectConnected(project))
-                }
                 is AddItem -> {
-                    val project = user.project ?: return reject("Project does not exist")
-                    val result = Operations.addItem(message.collectionName, message.item, project)
+                    val result = Operations.addItem(collection, message.item, project)
                     if (result.error) {
                         reject(result.message)
                     }
                 }
                 is EditItem -> {
-                    val project = user.project ?: return reject("Project does not exist")
-                    val result = Operations.setItem(message.collectionName, message.item, project)
+                    val result = Operations.setItem(collection, message.item, project)
                     if (result.error) {
                         reject(result.message)
                     }
                 }
                 is DeleteItem -> {
-                    val project = user.project ?: return reject("Project does not exist")
-                    val result = Operations.deleteItem(message.collectionName, message.id, project)
+                    val result = Operations.deleteItem(collection, message.id, project)
                     if (result.error) {
                         reject(result.message)
                     }
                 }
                 is LoadCollection -> {
-                    val project = user.project ?: return reject("Project does not exist")
-                    val result = Operations.loadCollection(message.name, project, this)
+                    val result = Operations.loadCollection(collection, this)
                     if (result.error) {
                         reject(result.message)
                     }
@@ -97,13 +104,21 @@ object WebsocketHandler {
     }
 
     private suspend fun WebSocketSession.reject(message: String) {
-        sendMessage(WebsocketMessage.Error(message))
+        sendMessage(Error(message))
     }
 }
 
 private fun String?.makeNullIfEmpty() =
     if (this?.isEmpty() == true) null else this
 
+val WebsocketMessage.collectionName: String?
+    get() = when (this) {
+        is AddItem -> this.collectionName
+        is EditItem -> this.collectionName
+        is DeleteItem -> this.collectionName
+        is LoadCollection -> this.name
+        else -> null
+    }
 
 @Serializable
 data class User(
