@@ -1,7 +1,6 @@
 package com.junron.pyrostore
 
 import com.junron.pyrostore.WebsocketMessage.*
-import io.ktor.http.cio.websocket.WebSocketSession
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.serialization.DeserializationStrategy
@@ -13,7 +12,7 @@ import java.util.*
 @UnstableDefault
 class PyrostoreCollection<T>(
     val name: String,
-    private val connection: WebSocketSession,
+    private val service: PyrostoreService,
     private val serializer: DeserializationStrategy<T>,
     private val items: MutableList<ItemWrapper<T>> = mutableListOf()
 ) : List<ItemWrapper<T>> by items {
@@ -21,7 +20,7 @@ class PyrostoreCollection<T>(
 
     init {
         GlobalScope.launch {
-            connection.sendMessage(LoadCollection(name))
+            service.sendMessage(LoadCollection(name))
         }
     }
 
@@ -53,14 +52,14 @@ class PyrostoreCollection<T>(
         broadcast(ChangeType.DELETED, id)
     }
 
-    fun broadcast(type: ChangeType, id: String? = null, item: T? = null) {
+    private fun broadcast(type: ChangeType, id: String? = null, item: T? = null) {
         watchers.forEach { it(type, id, item) }
     }
 
-    suspend operator fun plusAssign(item: T) {
+    operator fun plusAssign(item: T) {
         val id = UUID.randomUUID().toString()
 //        items += ItemWrapper(id, item)
-        connection.sendMessage(
+        service.sendMessage(
             AddItem(
                 name, CollectionItem(
                     id,
@@ -70,17 +69,17 @@ class PyrostoreCollection<T>(
         )
     }
 
-    suspend operator fun minusAssign(id: String) {
+    operator fun minusAssign(id: String) {
 //        internalDeleteItem(id)
-        connection.sendMessage(
+        service.sendMessage(
             DeleteItem(name, id)
         )
     }
 
     operator fun get(id: String) = items.firstOrNull { it.id == id }
 
-    suspend fun set(id: String, item: T) {
-        connection.sendMessage(
+    operator fun set(id: String, item: T) {
+        service.sendMessage(
             EditItem(
                 name, CollectionItem(
                     id,

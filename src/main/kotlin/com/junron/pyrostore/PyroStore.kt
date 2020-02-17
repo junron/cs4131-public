@@ -1,29 +1,32 @@
 package com.junron.pyrostore
 
 import com.junron.pyrostore.WebsocketMessage.ProjectConnect
-import io.ktor.client.HttpClient
-import io.ktor.client.features.cookies.ConstantCookiesStorage
-import io.ktor.client.features.cookies.HttpCookies
-import io.ktor.client.features.websocket.ClientWebSocketSession
-import io.ktor.client.features.websocket.WebSockets
-import io.ktor.client.features.websocket.ws
-import io.ktor.client.features.websocket.wss
-import io.ktor.http.Cookie
-import io.ktor.http.cio.websocket.Frame
-import io.ktor.http.cio.websocket.WebSocketSession
-import io.ktor.http.cio.websocket.readText
+import com.tinder.scarlet.Message
+import com.tinder.scarlet.Scarlet
+import com.tinder.scarlet.WebSocket
+import com.tinder.scarlet.retry.ExponentialWithJitterBackoffStrategy
+import com.tinder.scarlet.websocket.okhttp.newWebSocketFactory
+import com.tinder.scarlet.ws.Receive
+import com.tinder.scarlet.ws.Send
+import com.tinder.streamadapter.coroutines.CoroutinesStreamAdapterFactory
+import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.serialization.DeserializationStrategy
 import kotlinx.serialization.UnstableDefault
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonDecodingException
+import okhttp3.Cookie
+import okhttp3.CookieJar
+import okhttp3.HttpUrl
+import okhttp3.OkHttpClient
 
 @UnstableDefault
 class PyroStore {
+    private val backoffStrategy = ExponentialWithJitterBackoffStrategy(10, 5000)
     private var projectName = ""
     private var auth = ""
     private var local = false
     private var url = "localhost"
-    private lateinit var connection: ClientWebSocketSession
+    private lateinit var service: PyrostoreService
     internal val collections = mutableListOf<PyrostoreCollection<*>>()
     lateinit var project: Project
         internal set
@@ -52,57 +55,81 @@ class PyroStore {
 
 
     suspend fun connect(): PyroStore {
-        val client = HttpClient {
-            install(WebSockets)
-            install(HttpCookies) {
-                storage = ConstantCookiesStorage(Cookie("user_sess", auth, domain = url))
+        val client = OkHttpClient()
+            .newBuilder()
+            .cookieJar(object : CookieJar {
+                override fun loadForRequest(url: HttpUrl) = listOf(
+                    Cookie.Builder()
+                        .domain(this@PyroStore.url)
+                        .name("user_sess")
+                        .value(auth)
+                        .let {
+                            if (!local) it.secure() else it
+                        }.build()
+                )
+
+                override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {}
+
+            })
+            .build()
+
+        val scarlet = Scarlet.Builder()
+            .webSocketFactory(
+                client.newWebSocketFactory(
+                    if (local) "ws://localhost:8080/websockets"
+                    else "wss://$url/websockets"
+                )
+            )
+            .backoffStrategy(backoffStrategy)
+            .addStreamAdapterFactory(CoroutinesStreamAdapterFactory())
+            .build()
+        service = scarlet.create()
+
+        for (event in service.receive()) {
+            when (event) {
+                is WebSocket.Event.OnConnectionOpened<*> -> {
+                    println("Connected")
+                    if (projectName.isNotEmpty()) {
+                        service.sendMessage(ProjectConnect(projectName))
+                    }
+                    onConnect()
+                }
+                is WebSocket.Event.OnMessageReceived -> {
+                    val text = (event.message as Message.Text).value
+                    try {
+                        val message = Json.parse(WebsocketMessage.serializer(), text)
+                        MessageHandler.onMessage(message, this)
+                    } catch (e: JsonDecodingException) {
+                        println("JSON: $text")
+                    }
+                }
+                is WebSocket.Event.OnConnectionFailed -> {
+                    println("Connection failed: ${event.throwable.message}")
+                    onDisconnect()
+                }
             }
         }
-        if (local) {
-            client.ws(
-                port = 8080,
-                path = "/websockets",
-                block = ::connectionHandler
-            )
-        } else {
-            client.wss(
-                host = url,
-                port = 443,
-                path = "/websockets",
-                block = ::connectionHandler
-            )
-        }
+
         return this
     }
 
-    private suspend fun connectionHandler(connection: ClientWebSocketSession) {
-        this.connection = connection
-        if (projectName.isNotEmpty()) {
-            connection.sendMessage(ProjectConnect(projectName))
-        }
-        onConnect()
-        for (frame in connection.incoming) {
-            if (frame !is Frame.Text) return
-            val message =
-                try {
-                    Json.parse(WebsocketMessage.serializer(), frame.readText())
-                } catch (e: JsonDecodingException) {
-                    println("JSON: ${frame.readText()}")
-                    return println("JSON decoding error: $e")
-                }
-            MessageHandler.onMessage(message, this)
-        }
-        onDisconnect()
-    }
 
     fun <T> collection(name: String, serializer: DeserializationStrategy<T>): PyrostoreCollection<T> {
-        val collection = PyrostoreCollection<T>(name, connection, serializer)
+        val collection = PyrostoreCollection<T>(name, service, serializer)
         collections.add(collection)
         return collection
     }
 
 }
 
-internal suspend fun WebSocketSession.sendMessage(message: WebsocketMessage) {
-    this.outgoing.send(Frame.Text(Json.stringify(WebsocketMessage.serializer(), message)))
+interface PyrostoreService {
+    @Send
+    fun send(text: String)
+
+    @Receive
+    fun receive(): ReceiveChannel<WebSocket.Event>
+}
+
+internal fun PyrostoreService.sendMessage(message: WebsocketMessage) {
+    send(Json.stringify(WebsocketMessage.serializer(), message))
 }

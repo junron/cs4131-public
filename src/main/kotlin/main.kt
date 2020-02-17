@@ -10,6 +10,7 @@ import kotlinx.serialization.serializer
 @UnstableDefault
 fun main() {
     runBlocking {
+
         val pyrostore = PyroStore()
             .local()
             .project("test")
@@ -18,7 +19,7 @@ fun main() {
             GlobalScope.launch {
                 val collection = pyrostore.collection("hello", String.serializer())
                 collection.watch { type, id, item ->
-                    if(type == ChangeType.REFRESHED){
+                    if (type == ChangeType.REFRESHED) {
                         println(collection)
                         return@watch
                     }
