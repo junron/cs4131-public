@@ -4,21 +4,20 @@ plugins {
 }
 
 group 'com.junron'
-version '1.1.0'
+version '1.1.1'
 
 repositories {
     mavenCentral()
     maven { url "https://jitpack.io" }
 }
 
-String ktorVersion = "1.2.4"
 
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     implementation "com.squareup.okhttp3:okhttp:4.3.1"
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime:0.14.0")
-    implementation 'com.tinder.scarlet:scarlet:0.1.9'
-    implementation 'com.github.tinder.scarlet:scarlet-websocket-okhttp:0.1.2'
+    implementation 'com.github.tinder.scarlet:scarlet:0.1.9'
+    implementation 'com.github.tinder.scarlet:scarlet-websocket-okhttp:0.1.9'
     implementation "com.tinder.scarlet:stream-adapter-coroutines:0.1.9"
 }
 

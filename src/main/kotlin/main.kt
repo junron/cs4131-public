@@ -12,7 +12,7 @@ fun main() {
     runBlocking {
 
         val pyrostore = PyroStore()
-            .local()
+            .remote("pyrostore.nushhwboard.ml")
             .project("test")
 
         pyrostore.onProjectConnect {
