@@ -125,6 +125,14 @@ class PyrostoreCollection<T>(
         )
     }
 
+    fun replaceAll(items: List<T>) {
+        if (!offline) return
+        internalSetCollection(items.map {
+            CollectionItem(UUID.randomUUID().toString(), Json.stringify(serializer as SerializationStrategy<T>, it))
+        })
+    }
+
+
     fun watch(callback: (type: ChangeType, id: String?, item: T?) -> Unit) {
         watchers += callback
     }
