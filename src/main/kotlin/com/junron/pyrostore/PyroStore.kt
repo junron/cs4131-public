@@ -9,7 +9,9 @@ import com.tinder.scarlet.websocket.okhttp.newWebSocketFactory
 import com.tinder.scarlet.ws.Receive
 import com.tinder.scarlet.ws.Send
 import com.tinder.streamadapter.coroutines.CoroutinesStreamAdapterFactory
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.channels.ReceiveChannel
+import kotlinx.coroutines.launch
 import kotlinx.serialization.DeserializationStrategy
 import kotlinx.serialization.UnstableDefault
 import kotlinx.serialization.json.Json
@@ -18,6 +20,7 @@ import okhttp3.Cookie
 import okhttp3.CookieJar
 import okhttp3.HttpUrl
 import okhttp3.OkHttpClient
+import java.io.File
 
 @UnstableDefault
 class PyroStore {
@@ -27,11 +30,14 @@ class PyroStore {
     private var local = false
     private var url = "localhost"
     private lateinit var service: PyrostoreService
+    internal lateinit var cacheDir: File
     internal val collections = mutableListOf<PyrostoreCollection<*>>()
-    lateinit var project: Project
+    var project: Project? = null
         internal set
     lateinit var user: User
         internal set
+    private lateinit var queuedRequests: PyrostoreCollection<WebsocketMessage>
+    internal var connected: Boolean = false
 
     fun project(name: String): PyroStore {
         projectName = name
@@ -40,6 +46,12 @@ class PyroStore {
 
     fun auth(token: String): PyroStore {
         auth = token
+        return this
+    }
+
+    fun cache(dir: File): PyroStore {
+        cacheDir = dir
+        queuedRequests = collection("internal_request_queue", WebsocketMessage.serializer(), true)
         return this
     }
 
@@ -54,7 +66,7 @@ class PyroStore {
     }
 
 
-    suspend fun connect(): PyroStore {
+    fun connect(): PyroStore {
         val client = OkHttpClient()
             .newBuilder()
             .cookieJar(object : CookieJar {
@@ -85,27 +97,40 @@ class PyroStore {
             .build()
         service = scarlet.create()
 
-        for (event in service.receive()) {
-            when (event) {
-                is WebSocket.Event.OnConnectionOpened<*> -> {
-                    println("Connected")
-                    if (projectName.isNotEmpty()) {
-                        service.sendMessage(ProjectConnect(projectName))
+        GlobalScope.launch {
+            for (event in service.receive()) {
+                when (event) {
+                    is WebSocket.Event.OnConnectionOpened<*> -> {
+                        connected = true
+
+                        println("Connected")
+                        if (projectName.isNotEmpty()) {
+                            sendMessage(ProjectConnect(projectName))
+                        }
+                        collections.filter { !it.offline }
+                            .forEach {
+                                it.onConnect(queuedRequests.filter { itemWrapper ->
+                                    println("Chame:" + itemWrapper.item.collectionName)
+                                    itemWrapper.item.collectionName == it.name
+                                }.map { itemWrapper -> itemWrapper.item })
+                            }
+                        onConnect()
                     }
-                    onConnect()
-                }
-                is WebSocket.Event.OnMessageReceived -> {
-                    val text = (event.message as Message.Text).value
-                    try {
-                        val message = Json.parse(WebsocketMessage.serializer(), text)
-                        MessageHandler.onMessage(message, this)
-                    } catch (e: JsonDecodingException) {
-                        println("JSON: $text")
+                    is WebSocket.Event.OnMessageReceived -> {
+                        val text = (event.message as Message.Text).value
+                        try {
+                            val message = Json.parse(WebsocketMessage.serializer(), text)
+                            MessageHandler.onMessage(message, this@PyroStore)
+                        } catch (e: JsonDecodingException) {
+                            println("JSON: $text")
+                        }
                     }
-                }
-                is WebSocket.Event.OnConnectionFailed -> {
-                    println("Connection failed: ${event.throwable.message}")
-                    onDisconnect()
+                    is WebSocket.Event.OnConnectionFailed -> {
+                        println("Connection failed: ${event.throwable.message}")
+                        connected = false
+                        project = null
+                        onDisconnect()
+                    }
                 }
             }
         }
@@ -114,10 +139,31 @@ class PyroStore {
     }
 
 
-    fun <T> collection(name: String, serializer: DeserializationStrategy<T>): PyrostoreCollection<T> {
-        val collection = PyrostoreCollection<T>(name, service, serializer)
-        collections.add(collection)
+    fun <T> collection(
+        name: String,
+        serializer: DeserializationStrategy<T>,
+        offline: Boolean = false
+    ): PyrostoreCollection<T> {
+        val collection = PyrostoreCollection(
+            name,
+            serializer = serializer,
+            offline = offline,
+            service = this
+        )
+        if (!offline)
+            collections.add(collection)
         return collection
+    }
+
+    internal fun sendMessage(message: WebsocketMessage) {
+        if (connected) {
+            println("Sent: $message")
+            service.send(Json.stringify(WebsocketMessage.serializer(), message))
+        }
+        else {
+            println("Queued: $message")
+            queuedRequests.plusAssign(message)
+        }
     }
 
 }
@@ -130,6 +176,12 @@ interface PyrostoreService {
     fun receive(): ReceiveChannel<WebSocket.Event>
 }
 
-internal fun PyrostoreService.sendMessage(message: WebsocketMessage) {
-    send(Json.stringify(WebsocketMessage.serializer(), message))
-}
+
+internal val WebsocketMessage.collectionName: String?
+    get() = when (this) {
+        is WebsocketMessage.AddItem -> this.collectionName
+        is WebsocketMessage.EditItem -> this.collectionName
+        is WebsocketMessage.DeleteItem -> this.collectionName
+        is WebsocketMessage.LoadCollection -> this.name
+        else -> null
+    }
