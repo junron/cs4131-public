@@ -14,7 +14,7 @@ Preconfigured Microsoft Office Authentication for Android
     ```
 1. Add dependency to `app/build.gradle`
     ```gradle
-    implementation 'com.github.junron:cs4131-public:ms-auth-SNAPSHOT'
+    implementation 'com.github.junron:cs4131-public:3be1ad4'
     ```
 1. Add view:
     ```xml
@@ -23,7 +23,7 @@ Preconfigured Microsoft Office Authentication for Android
         android:layout_width="match_parent"
         android:layout_height="match_parent"/>
     ```
-1. Add code to Activity:
+1. Add code to Activity:  
     **Kotlin**
     ```kotlin
     // Initialize Volley
