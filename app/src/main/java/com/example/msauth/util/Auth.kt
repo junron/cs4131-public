@@ -9,12 +9,14 @@ import com.auth0.android.jwt.JWT
 import com.example.msauth.R
 
 object Auth {
-    lateinit var queue: RequestQueue
+    private lateinit var queue: RequestQueue
 
+    @JvmStatic
     fun init(context: Context) {
         queue = Volley.newRequestQueue(context)
     }
 
+    @JvmStatic
     fun getAccessToken(code: String, callback: (Map<String, Claim>) -> Unit) {
         queue.add(
             object : StringRequest(
