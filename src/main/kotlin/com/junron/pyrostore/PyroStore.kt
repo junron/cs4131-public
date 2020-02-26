@@ -109,10 +109,13 @@ class PyroStore {
                         }
                         collections.filter { !it.offline }
                             .forEach {
-                                it.onConnect(queuedRequests.filter { itemWrapper ->
-                                    println("Chame:" + itemWrapper.item.collectionName)
+                                val queuedItems = queuedRequests.filter { itemWrapper ->
                                     itemWrapper.item.collectionName == it.name
-                                }.map { itemWrapper -> itemWrapper.item })
+                                }
+                                queuedItems.forEach { request ->
+                                    queuedRequests.minusAssign(request.id)
+                                }
+                                it.onConnect(queuedItems.map { itemWrapper -> itemWrapper.item })
                             }
                         onConnect()
                     }
@@ -159,8 +162,7 @@ class PyroStore {
         if (connected) {
             println("Sent: $message")
             service.send(Json.stringify(WebsocketMessage.serializer(), message))
-        }
-        else {
+        } else {
             println("Queued: $message")
             queuedRequests.plusAssign(message)
         }
