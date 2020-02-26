@@ -20,6 +20,9 @@ class PyrostoreCollection<T>(
 ) : List<ItemWrapper<T>> by items {
     private val watchers = mutableListOf<(ChangeType, String?, T?) -> Unit>()
     private val cache = PyrostoreCache(this, service)
+    private val addIds = mutableListOf<String>()
+    private val editIds = mutableListOf<String>()
+    private val deleteIds = mutableListOf<String>()
 
     init {
         GlobalScope.launch {
@@ -52,6 +55,10 @@ class PyrostoreCollection<T>(
 
     internal fun internalAddItem(item: CollectionItem) {
         val data = Json.parse(serializer, item.data)
+        if(item.id in addIds){
+            addIds.remove(item.id)
+            return
+        }
         items += ItemWrapper(item.id, data)
         GlobalScope.launch {
             cache.writeItems()
@@ -61,6 +68,10 @@ class PyrostoreCollection<T>(
 
     internal fun internalUpdateItem(item: CollectionItem) {
         val data = Json.parse(serializer, item.data)
+        if(item.id in editIds){
+            editIds.remove(item.id)
+            return
+        }
         this.items.replaceAll { if (it.id == item.id) ItemWrapper(item.id, data) else it }
         GlobalScope.launch {
             cache.writeItems()
@@ -69,6 +80,10 @@ class PyrostoreCollection<T>(
     }
 
     internal fun internalDeleteItem(id: String) {
+        if(id in deleteIds){
+            deleteIds.remove(id)
+            return
+        }
         this.items.removeIf { it.id == id }
         GlobalScope.launch {
             cache.writeItems()
@@ -81,16 +96,16 @@ class PyrostoreCollection<T>(
     }
 
     operator fun plusAssign(item: T) {
-        println(item)
         val id = UUID.randomUUID().toString()
-        if (!offline) service.sendMessage(
-            AddItem(
+        if (!offline) {
+            service.sendMessage(AddItem(
                 name, CollectionItem(
                     id,
                     Json.stringify(serializer as SerializationStrategy<T>, item)
                 )
-            )
-        )
+            ))
+            addIds += id
+        }
         internalAddItem(
             CollectionItem(
                 id,
@@ -100,23 +115,25 @@ class PyrostoreCollection<T>(
     }
 
     operator fun minusAssign(id: String) {
-        if (!offline) service.sendMessage(
-            DeleteItem(name, id)
-        )
+        if (!offline) {
+            service.sendMessage(DeleteItem(name, id))
+            deleteIds += id
+        }
         internalDeleteItem(id)
     }
 
     operator fun get(id: String) = items.firstOrNull { it.id == id }
 
     operator fun set(id: String, item: T) {
-        if (!offline) service.sendMessage(
-            EditItem(
+        if (!offline) {
+            service.sendMessage(EditItem(
                 name, CollectionItem(
                     id,
                     Json.stringify(serializer as SerializationStrategy<T>, item)
                 )
-            )
-        )
+            ))
+            editIds += id
+        }
         internalUpdateItem(
             CollectionItem(
                 id,
