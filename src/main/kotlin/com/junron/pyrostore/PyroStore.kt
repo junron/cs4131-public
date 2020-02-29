@@ -166,12 +166,12 @@ class PyroStore {
         if (connected) {
             println("Sent: $message")
             service.send(Json.stringify(WebsocketMessage.serializer(), message))
-            id ?: return
-            MessageHandler.messageIds[id] = callback
         } else {
             println("Queued: $message")
             queuedRequests.plusAssign(message)
         }
+        id ?: return
+        MessageHandler.messageIds[id] = callback
     }
 
 }

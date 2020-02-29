@@ -106,9 +106,10 @@ class PyrostoreCollection<T>(
 
     fun minusAssign(id: String, callback: (() -> Unit)? = null) {
         if (!offline) {
+            val messageId = uuid()
             service.sendMessage(
-                DeleteItem(uuid(), name, id),
-                id
+                DeleteItem(messageId, name, id),
+                messageId
             ) {
                 callback?.invoke()
             }
@@ -120,14 +121,15 @@ class PyrostoreCollection<T>(
 
     fun set(id: String, item: T, callback: ((ItemWrapper<T>) -> Unit)? = null) {
         if (!offline) {
+            val messageId = uuid()
             service.sendMessage(
                 EditItem(
-                    uuid(),
+                    messageId,
                     name, CollectionItem(
                         id,
                         Json.stringify(serializer, item)
                     )
-                ), id
+                ), messageId
             ) {
                 it ?: return@sendMessage
                 callback?.invoke(ItemWrapper(it.id, Json.parse(serializer, it.data)))
@@ -143,8 +145,10 @@ class PyrostoreCollection<T>(
 
     fun refresh(callback: ((List<ItemWrapper<T>>) -> Unit)? = null) {
         if (!offline) {
+            val messageId = uuid()
             service.sendMessage(
-                LoadCollection(uuid(), name)
+                LoadCollection(messageId, name),
+                messageId
             ) {
                 callback?.invoke(items)
             }

@@ -1,4 +1,3 @@
-import com.junron.pyrostore.ChangeType
 import com.junron.pyrostore.PyroStore
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.UnstableDefault
@@ -13,23 +12,15 @@ fun main() {
         val pyrostore = PyroStore()
             .remote("pyrostore.nushhwboard.ml")
             .cache(cacheDir)
-            .project("test")
-
-        pyrostore.connect()
-
+            .project("assignment-2")
+            .connect()
 
         val collection = pyrostore.collection("hello", String.serializer())
-        collection.watch { type, id, item ->
-            if (type == ChangeType.REFRESHED) {
-                println("Data loaded: $collection")
-                return@watch
+        collection.refresh {
+            println("Loaded items: $it")
+            collection.plusAssign("Hello, world") { item ->
+                println("Item added3: $item")
             }
-            println(type)
-            println(id)
-            println(item)
-        }
-        collection.plusAssign("Hello, world") {
-            println("Added")
         }
 
     }
