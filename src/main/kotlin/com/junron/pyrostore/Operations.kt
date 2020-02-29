@@ -10,30 +10,30 @@ import java.io.File
 
 @UnstableDefault
 object Operations {
-    suspend fun addItem(collection: CollectionFile, item: CollectionItem, project: Project): Result {
+    suspend fun addItem(messageId: String, collection: CollectionFile, item: CollectionItem, project: Project): Result {
         collection.writeData(collection.data + item)
-        WebsocketHandler.broadcast(ItemAdded(collection.name, item), project)
+        WebsocketHandler.broadcast(ItemAdded(messageId, collection.name, item), project)
         return Result(false, "Success")
     }
 
-    suspend fun setItem(collection: CollectionFile, item: CollectionItem, project: Project): Result {
+    suspend fun setItem(messageId: String, collection: CollectionFile, item: CollectionItem, project: Project): Result {
         val data = collection.data as MutableList
         data.replaceAll { if (it.id == item.id) item else it }
         collection.writeData(data)
-        WebsocketHandler.broadcast(ItemEdited(collection.name, item), project)
+        WebsocketHandler.broadcast(ItemEdited(messageId, collection.name, item), project)
         return Result(false, "Success")
     }
 
-    suspend fun deleteItem(collection: CollectionFile, id: String, project: Project): Result {
+    suspend fun deleteItem(messageId: String, collection: CollectionFile, id: String, project: Project): Result {
         val data = collection.data as MutableList
         data.removeIf { it.id == id }
         collection.writeData(data)
-        WebsocketHandler.broadcast(ItemDeleted(collection.name, id), project)
+        WebsocketHandler.broadcast(ItemDeleted(messageId, collection.name, id), project)
         return Result(false, "Success")
     }
 
-    suspend fun loadCollection(collection: CollectionFile, connection: WebSocketSession): Result {
-        connection.sendMessage(CollectionLoaded(collection.name, collection.data))
+    suspend fun loadCollection(messageId: String, collection: CollectionFile, connection: WebSocketSession): Result {
+        connection.sendMessage(CollectionLoaded(messageId, collection.name, collection.data))
         return Result(false, "Success")
     }
 }

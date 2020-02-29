@@ -76,25 +76,25 @@ object WebsocketHandler {
 
             when (message) {
                 is AddItem -> {
-                    val result = Operations.addItem(collection, message.item, project)
+                    val result = Operations.addItem(message.messageId, collection, message.item, project)
                     if (result.error) {
                         reject(result.message)
                     }
                 }
                 is EditItem -> {
-                    val result = Operations.setItem(collection, message.item, project)
+                    val result = Operations.setItem(message.messageId, collection, message.item, project)
                     if (result.error) {
                         reject(result.message)
                     }
                 }
                 is DeleteItem -> {
-                    val result = Operations.deleteItem(collection, message.id, project)
+                    val result = Operations.deleteItem(message.messageId, collection, message.id, project)
                     if (result.error) {
                         reject(result.message)
                     }
                 }
                 is LoadCollection -> {
-                    val result = Operations.loadCollection(collection, this)
+                    val result = Operations.loadCollection(message.messageId, collection, this)
                     if (result.error) {
                         reject(result.message)
                     }

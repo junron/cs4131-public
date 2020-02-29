@@ -30,27 +30,31 @@ sealed class WebsocketMessage {
 
     //     Requests
     @Serializable
-    data class AddItem(val collectionName: String, val item: CollectionItem) : WebsocketMessage()
+    data class AddItem(val messageId: String, val collectionName: String, val item: CollectionItem) : WebsocketMessage()
 
     @Serializable
-    data class EditItem(val collectionName: String, val item: CollectionItem) : WebsocketMessage()
+    data class EditItem(val messageId: String, val collectionName: String, val item: CollectionItem) :
+        WebsocketMessage()
 
     @Serializable
-    data class DeleteItem(val collectionName: String, val id: String) : WebsocketMessage()
+    data class DeleteItem(val messageId: String, val collectionName: String, val id: String) : WebsocketMessage()
 
     @Serializable
-    data class LoadCollection(val name: String) : WebsocketMessage()
+    data class LoadCollection(val messageId: String, val name: String) : WebsocketMessage()
 
     //  Collection responses
     @Serializable
-    data class ItemAdded(val collectionName: String, val item: CollectionItem) : WebsocketMessage()
+    data class ItemAdded(val messageId: String, val collectionName: String, val item: CollectionItem) :
+        WebsocketMessage()
 
     @Serializable
-    data class ItemEdited(val collectionName: String, val item: CollectionItem) : WebsocketMessage()
+    data class ItemEdited(val messageId: String, val collectionName: String, val item: CollectionItem) :
+        WebsocketMessage()
 
     @Serializable
-    data class ItemDeleted(val collectionName: String, val id: String) : WebsocketMessage()
+    data class ItemDeleted(val messageId: String, val collectionName: String, val id: String) : WebsocketMessage()
 
     @Serializable
-    data class CollectionLoaded(val name: String, val item: List<CollectionItem>) : WebsocketMessage()
+    data class CollectionLoaded(val messageId: String, val name: String, val item: List<CollectionItem>) :
+        WebsocketMessage()
 }

@@ -5,10 +5,14 @@ import com.junron.pyrostore.WebsocketHandler.handleDisconnect
 import com.junron.pyrostore.WebsocketHandler.handleMessage
 import com.junron.pyrostore.WebsocketHandler.sendMessage
 import io.ktor.application.Application
+import io.ktor.application.call
 import io.ktor.application.install
 import io.ktor.features.XForwardedHeaderSupport
+import io.ktor.http.ContentType
 import io.ktor.http.cio.websocket.Frame
 import io.ktor.http.cio.websocket.readText
+import io.ktor.response.respondText
+import io.ktor.routing.get
 import io.ktor.routing.routing
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
@@ -35,6 +39,18 @@ fun Application.server() {
 
 
     routing {
+        get("/api/covid-19"){
+            Scrape.initDocument()
+            val fullResponse = FullResponse(
+                Scrape.getDorscon(),
+                Scrape.getCaseData(),
+                Scrape.getLastUpdated()
+            )
+            call.respondText(
+                contentType = ContentType.Application.Json,
+                text = Json.indented.stringify(FullResponse.serializer(), fullResponse)
+            )
+        }
         webSocket("/websockets") {
             handleConnect(call, this)
             for (frame in incoming) {
