@@ -4,11 +4,14 @@ import com.junron.pyrostore.WebsocketMessage.*
 import kotlinx.serialization.UnstableDefault
 
 internal object MessageHandler {
+    internal val messageIds =
+        mutableMapOf<String, ((message: CollectionItem?) -> Unit)?>()
+
     @UnstableDefault
-    fun onMessage(message: WebsocketMessage, pyroStore: PyroStore){
-        when(message){
-            is Error -> println("Error: "+message.message)
-            is AuthError -> println("AuthError: "+message.message)
+    fun onMessage(message: WebsocketMessage, pyroStore: PyroStore) {
+        when (message) {
+            is Error -> println("Error: " + message.message)
+            is AuthError -> println("AuthError: " + message.message)
             is ProjectConnected -> {
                 println("Connected to project ${message.project.name}")
                 pyroStore.project = message.project
@@ -20,6 +23,11 @@ internal object MessageHandler {
             }
             is ItemAdded -> {
                 println("Item added: ${message.item}")
+                if (message.messageId in messageIds) {
+                    messageIds[message.messageId]?.invoke(message.item)
+                    messageIds.remove(message.messageId)
+                    return
+                }
                 val collection = pyroStore.collections.firstOrNull {
                     it.name == message.collectionName
                 } ?: return println("Collection not initialized.")
@@ -27,6 +35,11 @@ internal object MessageHandler {
             }
             is ItemEdited -> {
                 println("Item edited: ${message.item}")
+                if (message.messageId in messageIds) {
+                    messageIds[message.messageId]?.invoke(message.item)
+                    messageIds.remove(message.messageId)
+                    return
+                }
                 val collection = pyroStore.collections.firstOrNull {
                     it.name == message.collectionName
                 } ?: return println("Collection not initialized.")
@@ -34,6 +47,11 @@ internal object MessageHandler {
             }
             is ItemDeleted -> {
                 println("Deleted edited: ${message.id}")
+                if (message.messageId in messageIds) {
+                    messageIds[message.messageId]?.invoke(null)
+                    messageIds.remove(message.messageId)
+                    return
+                }
                 val collection = pyroStore.collections.firstOrNull {
                     it.name == message.collectionName
                 } ?: return println("Collection not initialized.")
@@ -45,6 +63,10 @@ internal object MessageHandler {
                     it.name == message.name
                 } ?: return println("Collection not initialized.")
                 collection.internalSetCollection(message.item)
+                if (message.messageId in messageIds) {
+                    messageIds[message.messageId]?.invoke(null)
+                    messageIds.remove(message.messageId)
+                }
             }
         }
     }

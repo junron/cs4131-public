@@ -28,7 +28,9 @@ fun main() {
             println(id)
             println(item)
         }
-        collection += "Hello, world"
+        collection.plusAssign("Hello, world") {
+            println("Added")
+        }
 
     }
 }

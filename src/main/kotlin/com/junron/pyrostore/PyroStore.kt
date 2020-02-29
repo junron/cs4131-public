@@ -12,7 +12,7 @@ import com.tinder.streamadapter.coroutines.CoroutinesStreamAdapterFactory
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.launch
-import kotlinx.serialization.DeserializationStrategy
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.UnstableDefault
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonDecodingException
@@ -144,7 +144,7 @@ class PyroStore {
 
     fun <T> collection(
         name: String,
-        serializer: DeserializationStrategy<T>,
+        serializer: KSerializer<T>,
         offline: Boolean = false
     ): PyrostoreCollection<T> {
         val collection = PyrostoreCollection(
@@ -158,10 +158,16 @@ class PyroStore {
         return collection
     }
 
-    internal fun sendMessage(message: WebsocketMessage) {
+    internal fun sendMessage(
+        message: WebsocketMessage,
+        id: String? = null,
+        callback: ((CollectionItem?) -> Unit)? = null
+    ) {
         if (connected) {
             println("Sent: $message")
             service.send(Json.stringify(WebsocketMessage.serializer(), message))
+            id ?: return
+            MessageHandler.messageIds[id] = callback
         } else {
             println("Queued: $message")
             queuedRequests.plusAssign(message)

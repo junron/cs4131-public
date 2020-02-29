@@ -4,8 +4,7 @@ import com.junron.pyrostore.WebsocketMessage.*
 import com.junron.pyrostore.cache.PyrostoreCache
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import kotlinx.serialization.DeserializationStrategy
-import kotlinx.serialization.SerializationStrategy
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.UnstableDefault
 import kotlinx.serialization.json.Json
 import java.util.*
@@ -14,15 +13,12 @@ import java.util.*
 class PyrostoreCollection<T>(
     val name: String,
     private val items: MutableList<ItemWrapper<T>> = mutableListOf(),
-    internal val serializer: DeserializationStrategy<T>,
+    internal val serializer: KSerializer<T>,
     internal val offline: Boolean = false,
     private val service: PyroStore
 ) : List<ItemWrapper<T>> by items {
     private val watchers = mutableListOf<(ChangeType, String?, T?) -> Unit>()
     private val cache = PyrostoreCache(this, service)
-    private val addIds = mutableListOf<String>()
-    private val editIds = mutableListOf<String>()
-    private val deleteIds = mutableListOf<String>()
 
     init {
         GlobalScope.launch {
@@ -34,7 +30,7 @@ class PyrostoreCollection<T>(
     internal fun onConnect(messages: List<WebsocketMessage>) {
         println(messages)
         if (!offline) {
-            service.sendMessage(LoadCollection(name))
+            service.sendMessage(LoadCollection(uuid(), name))
             messages.forEach { service.sendMessage(it) }
         }
     }
@@ -55,10 +51,6 @@ class PyrostoreCollection<T>(
 
     internal fun internalAddItem(item: CollectionItem) {
         val data = Json.parse(serializer, item.data)
-        if(item.id in addIds){
-            addIds.remove(item.id)
-            return
-        }
         items += ItemWrapper(item.id, data)
         GlobalScope.launch {
             cache.writeItems()
@@ -68,10 +60,6 @@ class PyrostoreCollection<T>(
 
     internal fun internalUpdateItem(item: CollectionItem) {
         val data = Json.parse(serializer, item.data)
-        if(item.id in editIds){
-            editIds.remove(item.id)
-            return
-        }
         this.items.replaceAll { if (it.id == item.id) ItemWrapper(item.id, data) else it }
         GlobalScope.launch {
             cache.writeItems()
@@ -80,10 +68,6 @@ class PyrostoreCollection<T>(
     }
 
     internal fun internalDeleteItem(id: String) {
-        if(id in deleteIds){
-            deleteIds.remove(id)
-            return
-        }
         this.items.removeIf { it.id == id }
         GlobalScope.launch {
             cache.writeItems()
@@ -95,57 +79,82 @@ class PyrostoreCollection<T>(
         watchers.forEach { it(type, id, item) }
     }
 
-    operator fun plusAssign(item: T) {
+    fun plusAssign(item: T, callback: ((ItemWrapper<T>) -> Unit)? = null) {
         val id = UUID.randomUUID().toString()
         if (!offline) {
-            service.sendMessage(AddItem(
-                name, CollectionItem(
+            service.sendMessage(
+                AddItem(
                     id,
-                    Json.stringify(serializer as SerializationStrategy<T>, item)
-                )
-            ))
-            addIds += id
+                    name, CollectionItem(
+                        uuid(),
+                        Json.stringify(serializer, item)
+                    )
+                ),
+                id
+            ) {
+                it ?: return@sendMessage
+                callback?.invoke(ItemWrapper(it.id, Json.parse(serializer, it.data)))
+            }
         }
         internalAddItem(
             CollectionItem(
                 id,
-                Json.stringify(serializer as SerializationStrategy<T>, item)
+                Json.stringify(serializer, item)
             )
         )
     }
 
-    operator fun minusAssign(id: String) {
+    fun minusAssign(id: String, callback: (() -> Unit)? = null) {
         if (!offline) {
-            service.sendMessage(DeleteItem(name, id))
-            deleteIds += id
+            service.sendMessage(
+                DeleteItem(uuid(), name, id),
+                id
+            ) {
+                callback?.invoke()
+            }
         }
         internalDeleteItem(id)
     }
 
     operator fun get(id: String) = items.firstOrNull { it.id == id }
 
-    operator fun set(id: String, item: T) {
+    fun set(id: String, item: T, callback: ((ItemWrapper<T>) -> Unit)? = null) {
         if (!offline) {
-            service.sendMessage(EditItem(
-                name, CollectionItem(
-                    id,
-                    Json.stringify(serializer as SerializationStrategy<T>, item)
-                )
-            ))
-            editIds += id
+            service.sendMessage(
+                EditItem(
+                    uuid(),
+                    name, CollectionItem(
+                        id,
+                        Json.stringify(serializer, item)
+                    )
+                ), id
+            ) {
+                it ?: return@sendMessage
+                callback?.invoke(ItemWrapper(it.id, Json.parse(serializer, it.data)))
+            }
         }
         internalUpdateItem(
             CollectionItem(
                 id,
-                Json.stringify(serializer as SerializationStrategy<T>, item)
+                Json.stringify(serializer, item)
             )
         )
+    }
+
+    fun refresh(callback: ((List<ItemWrapper<T>>) -> Unit)? = null) {
+        if (!offline) {
+            service.sendMessage(
+                LoadCollection(uuid(), name)
+            ) {
+                callback?.invoke(items)
+            }
+        }
     }
 
     fun replaceAll(items: List<T>) {
         if (!offline) return
         internalSetCollection(items.map {
-            CollectionItem(UUID.randomUUID().toString(), Json.stringify(serializer as SerializationStrategy<T>, it))
+            CollectionItem(UUID.randomUUID().toString(), Json.stringify(serializer, it))
         })
     }
 
@@ -155,6 +164,8 @@ class PyrostoreCollection<T>(
     }
 
     override fun toString() = items.toString()
+
+    private fun uuid() = UUID.randomUUID().toString()
 }
 
 data class ItemWrapper<T>(val id: String, val item: T)
