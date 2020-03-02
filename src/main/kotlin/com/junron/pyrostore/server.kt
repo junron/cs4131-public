@@ -21,6 +21,7 @@ import io.ktor.websocket.webSocket
 import kotlinx.serialization.UnstableDefault
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonDecodingException
+import java.io.File
 
 fun main(args: Array<String>) {
     val port = if (args.size == 1) args[0].toInt() else 8080
@@ -39,13 +40,20 @@ fun Application.server() {
 
 
     routing {
-        get("/api/covid-19"){
-            Scrape.initDocument()
-            val fullResponse = FullResponse(
-                Scrape.getDorscon(),
-                Scrape.getCaseData(),
-                Scrape.getLastUpdated()
-            )
+        get("/api/covid-19") {
+            val overrideFile = File("override.json")
+            val fullResponse =
+                if (overrideFile.exists()) {
+                    Json.nonstrict.parse(FullResponse.serializer(), overrideFile.readText())
+                } else {
+                    Scrape.initDocument()
+                    FullResponse(
+                        Scrape.getDorscon(),
+                        Scrape.getCaseData(),
+                        Scrape.getLastUpdated()
+                    )
+                }
+
             call.respondText(
                 contentType = ContentType.Application.Json,
                 text = Json.indented.stringify(FullResponse.serializer(), fullResponse)

@@ -19,13 +19,17 @@ object Scrape {
     }
 
     fun getCaseData(): Map<String, Int> {
-        val dataElements = document.selectFirst("table:contains(Confirmed cases)").select("tr")
-        return dataElements.map {
-            val children = it.select("td")
-            val name = children.first().text()
-            val data = children.last().text().toInt()
-            name to data
-        }.toMap()
+        val dataElements = document.selectFirst("table:contains(ACTIVE CASES)").select("td")
+        val keys = mutableListOf<String>()
+        val values = mutableListOf<Int>()
+        dataElements.forEach {
+            if(it.text().toIntOrNull() == null){
+                keys += it.text()
+            }else{
+                values += it.text().toInt()
+            }
+        }
+        return keys.mapIndexed { index, s -> s to values[index] }.toMap()
     }
 
     fun getLastUpdated() = document
