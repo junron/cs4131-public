@@ -23,13 +23,27 @@ object Scrape {
         val keys = mutableListOf<String>()
         val values = mutableListOf<Int>()
         dataElements.forEach {
-            if(it.text().toIntOrNull() == null){
+            if (it.text().toIntOrNull() == null) {
                 keys += it.text()
-            }else{
+            } else {
                 values += it.text().toInt()
             }
         }
-        return keys.mapIndexed { index, s -> s to values[index] }.toMap()
+        val entries = keys.mapIndexed { index, s -> s to values[index] }.toMap() as MutableMap
+        val result = mutableMapOf<String, Int>()
+        entries["Hospitalised (Stable)"]?.let { n1 ->
+            entries["Hospitalised (Critical)"]?.let {
+                result["Hospitalised"] = n1 + it
+            }
+        }
+        result.putAll(entries)
+        entries["ACTIVE CASES"]?.let { it + (entries["Discharged"] ?: 0) }?.let {
+            result["Total Confirmed Cases"] = it
+            result.remove("ACTIVE CASES")
+        }
+
+
+        return result
     }
 
     fun getLastUpdated() = document
