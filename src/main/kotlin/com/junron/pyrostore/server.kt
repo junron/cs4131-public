@@ -4,6 +4,8 @@ import com.junron.pyrostore.WebsocketHandler.handleConnect
 import com.junron.pyrostore.WebsocketHandler.handleDisconnect
 import com.junron.pyrostore.WebsocketHandler.handleMessage
 import com.junron.pyrostore.WebsocketHandler.sendMessage
+import com.junron.pyrostore.auth.CertificateAuthority
+import com.junron.pyrostore.auth.certificates
 import io.ktor.application.Application
 import io.ktor.application.call
 import io.ktor.application.install
@@ -13,9 +15,7 @@ import io.ktor.http.HttpMethod
 import io.ktor.http.cio.websocket.Frame
 import io.ktor.http.cio.websocket.readText
 import io.ktor.response.respondText
-import io.ktor.routing.get
-import io.ktor.routing.route
-import io.ktor.routing.routing
+import io.ktor.routing.*
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import io.ktor.websocket.WebSockets
@@ -40,8 +40,13 @@ fun Application.server() {
     install(XForwardedHeaderSupport)
     install(WebSockets)
 
+    CertificateAuthority.loadKeys()
 
     routing {
+        route("/certificates"){
+            certificates()
+        }
+
         get("/api/covid-19") {
             val overrideFile = File("override.json")
             val fullResponse =

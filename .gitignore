@@ -3,3 +3,4 @@
 /.gradle
 /projects.json
 /data
+/secret/

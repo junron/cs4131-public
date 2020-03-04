@@ -1,9 +1,11 @@
-package com.junron.pyrostore
+package com.junron.pyrostore.auth
 
 import com.auth0.jwk.JwkProviderBuilder
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
 import com.auth0.jwt.exceptions.JWTVerificationException
+import com.junron.pyrostore.Either
+import com.junron.pyrostore.User
 import java.net.URL
 import java.security.interfaces.RSAPublicKey
 
@@ -20,5 +22,11 @@ fun auth(token: String): Either<User, String> {
     } catch (exception: JWTVerificationException) {
         return Either.Right("Invalid JWT signature")
     }
-    return Either.Left(User(true, decoded.claims["name"]?.asString()!!, decoded.claims["unique_name"]?.asString()!!))
+    return Either.Left(
+        User(
+            true,
+            decoded.claims["name"]?.asString()!!,
+            decoded.claims["unique_name"]?.asString()!!
+        )
+    )
 }

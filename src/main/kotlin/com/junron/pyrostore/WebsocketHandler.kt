@@ -1,6 +1,7 @@
 package com.junron.pyrostore
 
 import com.junron.pyrostore.WebsocketMessage.*
+import com.junron.pyrostore.auth.auth
 import io.ktor.application.ApplicationCall
 import io.ktor.http.cio.websocket.CloseReason
 import io.ktor.http.cio.websocket.Frame

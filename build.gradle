@@ -33,6 +33,7 @@ dependencies {
     implementation 'com.auth0:java-jwt:3.9.0'
     implementation 'com.auth0:jwks-rsa:0.10.0'
     implementation 'org.jsoup:jsoup:1.12.2'
+    implementation 'org.whispersystems:curve25519-android:0.5.0'
 }
 
 compileKotlin {
