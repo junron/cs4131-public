@@ -14,26 +14,26 @@ object CertificateAuthority {
     }
 
     fun sign(message: String): String {
-        val encoder = Base64.getEncoder()
+        val encoder = Base64.getUrlEncoder()
         val cipher = Curve25519.getInstance(Curve25519.BEST)
         return encoder.encodeToString(cipher.calculateSignature(privateKey, message.toByteArray()))
     }
 
     fun verify(message: String, signature: String): Boolean {
-        val decoder = Base64.getDecoder()
+        val decoder = Base64.getUrlDecoder()
         val cipher = Curve25519.getInstance(Curve25519.BEST)
         val decodedSignature = decoder.decode(signature)
         return cipher.verifySignature(publicKey, message.toByteArray(), decodedSignature)
     }
 
-    fun getPublicKey(): String = Base64.getEncoder().encodeToString(publicKey)
+    fun getPublicKey(): String = Base64.getUrlEncoder().encodeToString(publicKey)
 
     private fun String.loadKeyBytes() =
-        Base64.getDecoder().decode(this)
+        Base64.getUrlDecoder().decode(this)
 
     private fun generateKeyPair() {
         val instance = Curve25519.getInstance(Curve25519.BEST)
-        val encoder = Base64.getEncoder()
+        val encoder = Base64.getUrlEncoder()
         val keyPair = instance.generateKeyPair()
         File("secret/private.key").writeText(encoder.encodeToString(keyPair.privateKey))
         File("secret/public.key").writeText(encoder.encodeToString(keyPair.publicKey))

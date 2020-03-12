@@ -16,7 +16,7 @@ import java.util.*
 
 
 suspend fun apiAuth(name: Api, call: ApplicationCall): Boolean {
-    val decoder = Base64.getDecoder()
+    val decoder = Base64.getUrlDecoder()
     with(call) {
         val token =
             request.headers["x-pyrobase-api-token"] ?: request.queryParameters["pyrobase-api-token"]
@@ -32,6 +32,7 @@ suspend fun apiAuth(name: Api, call: ApplicationCall): Boolean {
 //         Verify signature
             if (!verify(tokenData, signature)) return forbidden()
         } catch (e: IllegalArgumentException) {
+            println("Malformed token: $token")
             return forbidden()
         }
 
@@ -69,7 +70,7 @@ fun <T> Json.Companion.parseOrNull(serializer: KSerializer<T>, string: String): 
 
 fun genToken() {
     CertificateAuthority.loadKeys()
-    val encoder = Base64.getEncoder()
+    val encoder = Base64.getUrlEncoder()
     val apis = Api.values()
     println("Available APIs:")
     apis.forEachIndexed { index, api ->
@@ -89,6 +90,6 @@ fun genToken() {
     println("Token: $tokenEncoded.$signature")
 }
 
-fun main(args: Array<String>) {
+fun main() {
     genToken()
 }
