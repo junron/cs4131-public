@@ -1,4 +1,4 @@
-package com.junron.pyrostore
+package com.junron.pyrostore.apis
 
 import kotlinx.serialization.Serializable
 import org.jsoup.Jsoup

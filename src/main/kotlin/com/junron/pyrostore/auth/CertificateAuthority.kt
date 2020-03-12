@@ -19,6 +19,13 @@ object CertificateAuthority {
         return encoder.encodeToString(cipher.calculateSignature(privateKey, message.toByteArray()))
     }
 
+    fun verify(message: String, signature: String): Boolean {
+        val decoder = Base64.getDecoder()
+        val cipher = Curve25519.getInstance(Curve25519.BEST)
+        val decodedSignature = decoder.decode(signature)
+        return cipher.verifySignature(publicKey, message.toByteArray(), decodedSignature)
+    }
+
     fun getPublicKey(): String = Base64.getEncoder().encodeToString(publicKey)
 
     private fun String.loadKeyBytes() =
