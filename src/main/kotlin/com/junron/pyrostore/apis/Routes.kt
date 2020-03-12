@@ -9,9 +9,12 @@ import kotlinx.serialization.json.Json
 
 fun Route.apis() {
 
+    get("token-test") {
+        if (apiAuth(Api.COVID_19, call))
+            call.respondText { "Your token is valid!" }
+    }
 
     get("covid-19") {
-//        if(!apiAuth(Api.COVID_19, call)) return@get
         Scrape.initDocument()
 
         val fullResponse = FullResponse(
