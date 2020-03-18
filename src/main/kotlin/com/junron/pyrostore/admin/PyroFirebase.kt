@@ -11,7 +11,7 @@ import java.io.File
 
 @UnstableDefault
 object PyroFirebase {
-    private val mentorReps = Json.parse(String.serializer().list, File("secret/mentorReps.json").readText())
+    val mentorReps = Json.parse(String.serializer().list, File("secret/mentorReps.json").readText())
     private val firebaseApp = FirebaseApp.initializeApp(
         FirebaseOptions.builder()
             .setCredentials(
