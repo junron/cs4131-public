@@ -23,10 +23,10 @@ object Scrape {
         val keys = mutableListOf<String>()
         val values = mutableListOf<Int>()
         dataElements.forEach {
-            if (it.text().toIntOrNull() == null) {
+            if (it.text().filterNumbers().toIntOrNull() == null) {
                 keys += it.text()
             } else {
-                values += it.text().toInt()
+                values += it.text().filterNumbers().toInt()
             }
         }
         val entries = keys.mapIndexed { index, s -> s to values[index] }.toMap() as MutableMap
@@ -51,6 +51,11 @@ object Scrape {
         .text()
         .substringAfter("as of ")
         .substringBefore(")")
+
+    private fun String.filterNumbers(): String {
+        val re = Regex("[^0-9]")
+        return re.replace(this, "")
+    }
 }
 
 @Serializable
