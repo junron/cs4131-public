@@ -8,6 +8,7 @@ import com.junron.pyrostore.apis.apis
 import com.junron.pyrostore.apis.genToken
 import com.junron.pyrostore.auth.CertificateAuthority
 import com.junron.pyrostore.auth.certificates
+import com.junron.pyrostore.fcm.notifications
 import io.ktor.application.Application
 import io.ktor.application.install
 import io.ktor.features.XForwardedHeaderSupport
@@ -51,6 +52,10 @@ fun Application.server() {
 
         route("/api") {
             apis()
+        }
+
+        route("/notifications") {
+            notifications()
         }
 
         webSocket("/websockets") {

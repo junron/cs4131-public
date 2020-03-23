@@ -12,7 +12,7 @@ import java.io.File
 @UnstableDefault
 object PyroFirebase {
     val mentorReps = Json.parse(String.serializer().list, File("secret/mentorReps.json").readText())
-    private val firebaseApp = FirebaseApp.initializeApp(
+    val firebaseApp = FirebaseApp.initializeApp(
         FirebaseOptions.builder()
             .setCredentials(
                 GoogleCredentials.fromStream(File("secret/admin-sdk.json").inputStream())

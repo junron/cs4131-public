@@ -41,7 +41,7 @@ suspend fun apiAuth(name: Api, call: ApplicationCall): Boolean {
     }
 }
 
-private suspend fun ApplicationCall.unauth() = run {
+suspend fun ApplicationCall.unauth() = run {
     respond(
         HttpStatusCode.Unauthorized,
         "Unauthenticated"
@@ -49,7 +49,7 @@ private suspend fun ApplicationCall.unauth() = run {
     false
 }
 
-private suspend fun ApplicationCall.forbidden() = run {
+suspend fun ApplicationCall.forbidden() = run {
     respond(
         HttpStatusCode.Forbidden,
         "Unauthorized"
