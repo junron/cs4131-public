@@ -8,6 +8,7 @@ import com.junron.pyrostore.apis.apis
 import com.junron.pyrostore.apis.genToken
 import com.junron.pyrostore.auth.CertificateAuthority
 import com.junron.pyrostore.auth.certificates
+import com.junron.pyrostore.auth.genFakeCertificate
 import com.junron.pyrostore.fcm.notifications
 import io.ktor.application.Application
 import io.ktor.application.install
@@ -25,9 +26,14 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonDecodingException
 
 fun main(args: Array<String>) {
-    if (args.isNotEmpty() && args.first() == "genToken") {
-        genToken()
-        return
+    if (args.isNotEmpty()) {
+        if (args.first() == "genToken") {
+            genToken()
+            return
+        } else if (args.first() == "genCertificate") {
+            genFakeCertificate()
+            return
+        }
     }
     val port = if (args.size == 1) args[0].toInt() else 8080
     embeddedServer(

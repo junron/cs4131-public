@@ -9,8 +9,8 @@ object CertificateAuthority {
     private lateinit var privateKey: ByteArray
     fun loadKeys() {
         if (!File("secret/public.key").exists()) generateKeyPair()
-        publicKey = File("secret/public.key").readText().loadKeyBytes()
-        privateKey = File("secret/private.key").readText().loadKeyBytes()
+        publicKey = File("secret/public.key").readText().trim().loadKeyBytes()
+        privateKey = File("secret/private.key").readText().trim().loadKeyBytes()
     }
 
     fun sign(message: String): String {
@@ -35,6 +35,8 @@ object CertificateAuthority {
         val instance = Curve25519.getInstance(Curve25519.BEST)
         val encoder = Base64.getUrlEncoder()
         val keyPair = instance.generateKeyPair()
+        File("secret/private.key").createNewFile()
+        File("secret/public.key").createNewFile()
         File("secret/private.key").writeText(encoder.encodeToString(keyPair.privateKey))
         File("secret/public.key").writeText(encoder.encodeToString(keyPair.publicKey))
     }

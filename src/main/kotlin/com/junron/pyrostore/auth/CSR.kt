@@ -19,8 +19,8 @@ data class CSR(val publicKey: String, val name: String, val id: String, val toke
         return false
     }
 
-    fun generateCertificate(): SignedCertificate? {
-        if (!verify()) return null
+    fun generateCertificate(verify: Boolean = true): SignedCertificate? {
+        if (verify && !verify()) return null
         val certificate = Certificate(publicKey, name, id, mapOf("mentorRep" to (id in mentorReps).toString()))
         val message = Json.plain.stringify(Certificate.serializer(), certificate)
         return SignedCertificate(certificate, CertificateAuthority.sign(message))
