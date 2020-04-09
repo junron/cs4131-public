@@ -6,7 +6,6 @@ import com.junron.pyrostore.Either
 import com.junron.pyrostore.Storage
 import com.junron.pyrostore.User
 import com.junron.pyrostore.admin.PyroFirebase.firebaseApp
-import com.junron.pyrostore.admin.PyroFirebase.mentorReps
 import com.junron.pyrostore.apis.forbidden
 import com.junron.pyrostore.auth.auth
 import io.ktor.application.call
@@ -35,14 +34,11 @@ fun Route.notifications() {
     }
     post("sendNotification") {
         val request = Json.parse(SendNotificationRequest.serializer(), call.receiveText())
-        val user = (auth(request.auth) as? Either.Left<User>)?.value ?: return@post run {
+        (auth(request.auth) as? Either.Left<User>)?.value ?: return@post run {
             call.forbidden()
         }
-        if (user.id !in mentorReps) return@post run {
-            call.forbidden()
-        }
-        val targetTokens = tokens
-            .filter { it.item.userId == request.targetId }
+        val targetTokens = if (request.targetIds.first() == "*") tokens else tokens
+            .filter { it.item.userId in request.targetIds }
 
         val response = messaging.sendMulticast(
             MulticastMessage.builder()
