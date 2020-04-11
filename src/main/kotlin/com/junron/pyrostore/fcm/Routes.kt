@@ -40,6 +40,11 @@ fun Route.notifications() {
         val targetTokens = if (request.targetIds.first() == "*") tokens else tokens
             .filter { it.item.userId in request.targetIds }
 
+        if(targetTokens.isEmpty()){
+            call.respondText { "No matching ids" }
+            return@post
+        }
+
         val response = messaging.sendMulticast(
             MulticastMessage.builder()
                 .apply {
