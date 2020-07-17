@@ -30,7 +30,7 @@ fun auth(token: String): Either<User, String> {
             User(
                 true,
                 decoded.claims["name"]?.asString()!!,
-                decoded.claims["unique_name"]?.asString()!!
+                decoded.claims["email"]?.asString()!!
             )
         )
     } else {
